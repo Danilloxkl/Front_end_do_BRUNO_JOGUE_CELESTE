@@ -17,7 +17,7 @@ export default function Header() {
           </NavLink>
           {user && (
             <NavLink to="/habits" className="nav-link">
-              Habits
+              Habitos
             </NavLink>
           )}
         </nav>
@@ -30,12 +30,12 @@ export default function Header() {
                 <small>{user.role}</small>
               </span>
               <button type="button" className="secondary-button" onClick={logout}>
-                Logout
+                Sair
               </button>
             </>
           ) : (
             <Link to="/login" className="primary-link">
-              Login
+              Entrar
             </Link>
           )}
         </div>

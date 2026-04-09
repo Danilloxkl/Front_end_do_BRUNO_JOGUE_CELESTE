@@ -1,24 +1,48 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { Toast } from 'primereact/toast'
 import HabitCard from '../components/HabitCard'
 import { createHabitRecord, getHabitRecords } from '../api/habitApi'
+import {
+  getHabitDateBounds,
+  validateHabitForm,
+} from '../utils/habitValidation'
 
 const initialForm = {
-  date: new Date().toISOString().slice(0, 10),
-  waterIntakeMl: 0,
-  activityMinutes: 0,
+  date: getHabitDateBounds().maxDateString,
+  waterIntakeMl: '',
+  activityMinutes: '',
   mood: 'normal',
   notes: '',
 }
 
 export default function HabitList() {
+  const toast = useRef(null)
+  const { minDateString, maxDateString } = getHabitDateBounds()
   const [records, setRecords] = useState([])
   const [form, setForm] = useState(initialForm)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState({})
 
   useEffect(() => {
     loadRecords()
+  }, [])
+
+  useEffect(() => {
+    const flashToast = sessionStorage.getItem('habitToast')
+
+    if (!flashToast) {
+      return
+    }
+
+    sessionStorage.removeItem('habitToast')
+
+    try {
+      toast.current?.show(JSON.parse(flashToast))
+    } catch {
+      sessionStorage.removeItem('habitToast')
+    }
   }, [])
 
   async function loadRecords() {
@@ -28,7 +52,7 @@ export default function HabitList() {
       const response = await getHabitRecords()
       setRecords(response.data)
     } catch (requestError) {
-      setError(requestError.response?.data?.message || 'Nao foi possivel carregar os registros.')
+      setError(requestError.response?.data?.message || 'Nao foi possível carregar os registros.')
     } finally {
       setLoading(false)
     }
@@ -36,11 +60,14 @@ export default function HabitList() {
 
   function handleChange(event) {
     const { name, value } = event.target
+    setFieldErrors((current) => ({ ...current, [name]: '' }))
     setForm((current) => ({
       ...current,
       [name]:
         name === 'waterIntakeMl' || name === 'activityMinutes'
-          ? Number(value)
+          ? value === ''
+            ? ''
+            : Number(value)
           : value,
     }))
   }
@@ -48,14 +75,40 @@ export default function HabitList() {
   async function handleSubmit(event) {
     event.preventDefault()
 
+    const { data, errors } = await validateHabitForm(form)
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors)
+      setError('Corrija os campos destacados antes de salvar.')
+      toast.current?.show({
+        severity: 'error',
+        summary: 'Formulário inválido',
+        detail: Object.values(errors)[0],
+      })
+      return
+    }
+
     try {
       setSaving(true)
       setError('')
-      await createHabitRecord(form)
+      setFieldErrors({})
+      await createHabitRecord(data)
       setForm(initialForm)
       await loadRecords()
+      toast.current?.show({
+        severity: 'success',
+        summary: 'Registro criado',
+        detail: 'O hábito foi salvo com sucesso.',
+      })
     } catch (requestError) {
-      setError(requestError.response?.data?.message || 'Nao foi possivel salvar o registro.')
+      const message =
+        requestError.response?.data?.message || 'Não foi possível salvar o registro.'
+      setError(message)
+      toast.current?.show({
+        severity: 'error',
+        summary: 'Erro ao salvar',
+        detail: message,
+      })
     } finally {
       setSaving(false)
     }
@@ -63,6 +116,7 @@ export default function HabitList() {
 
   return (
     <div className="page-stack">
+      <Toast ref={toast} position="top-right" />
       <section className="page-section">
         <div className="section-header">
           <div>
@@ -79,28 +133,39 @@ export default function HabitList() {
               name="date"
               value={form.date}
               onChange={handleChange}
+              min={minDateString}
+              max={maxDateString}
               required
             />
+            {fieldErrors.date && <small className="feedback-error">{fieldErrors.date}</small>}
           </label>
           <label>
             Agua (ml)
             <input
               type="number"
               name="waterIntakeMl"
-              min="0"
+              min="1"
               value={form.waterIntakeMl}
               onChange={handleChange}
+              required
             />
+            {fieldErrors.waterIntakeMl && (
+              <small className="feedback-error">{fieldErrors.waterIntakeMl}</small>
+            )}
           </label>
           <label>
             Atividade (min)
             <input
               type="number"
               name="activityMinutes"
-              min="0"
+              min="1"
               value={form.activityMinutes}
               onChange={handleChange}
+              required
             />
+            {fieldErrors.activityMinutes && (
+              <small className="feedback-error">{fieldErrors.activityMinutes}</small>
+            )}
           </label>
           <label>
             Humor
@@ -111,7 +176,9 @@ export default function HabitList() {
               maxLength="30"
               value={form.mood}
               onChange={handleChange}
+              required
             />
+            {fieldErrors.mood && <small className="feedback-error">{fieldErrors.mood}</small>}
           </label>
           <label className="full-span">
             Observações
@@ -122,6 +189,7 @@ export default function HabitList() {
               value={form.notes}
               onChange={handleChange}
             />
+            {fieldErrors.notes && <small className="feedback-error">{fieldErrors.notes}</small>}
           </label>
           <button type="submit" className="primary-button" disabled={saving}>
             {saving ? 'Salvando...' : 'Criar registro'}
@@ -152,7 +220,7 @@ export default function HabitList() {
         ) : (
           <div className="empty-card">
             <h3>Nenhum registro encontrado</h3>
-            <p>Suas entradas aparecerão aqui depois do primeiro salvamento.</p>
+            <p>Suas entradas aparecerão aqui depois do primeiro registro.</p>
           </div>
         )}
       </section>

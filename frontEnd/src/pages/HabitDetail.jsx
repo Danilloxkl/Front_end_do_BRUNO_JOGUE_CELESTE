@@ -1,18 +1,26 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { Toast } from 'primereact/toast'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   deleteHabitRecord,
   getHabitRecordById,
   updateHabitRecord,
 } from '../api/habitApi'
+import {
+  getHabitDateBounds,
+  validateHabitForm,
+} from '../utils/habitValidation'
 
 export default function HabitDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const toast = useRef(null)
+  const { minDateString, maxDateString } = getHabitDateBounds()
   const [form, setForm] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState({})
 
   useEffect(() => {
     let active = true
@@ -26,8 +34,8 @@ export default function HabitDetail() {
         if (active) {
           setForm({
             date: response.data.date,
-            waterIntakeMl: response.data.waterIntakeMl,
-            activityMinutes: response.data.activityMinutes,
+            waterIntakeMl: response.data.waterIntakeMl ?? '',
+            activityMinutes: response.data.activityMinutes ?? '',
             mood: response.data.mood,
             notes: response.data.notes ?? '',
           })
@@ -35,7 +43,7 @@ export default function HabitDetail() {
       } catch (requestError) {
         if (active) {
           setError(
-            requestError.response?.data?.message || 'Unable to load this record.'
+            requestError.response?.data?.message || 'Não foi possivel carregar este registro.'
           )
         }
       } finally {
@@ -54,11 +62,14 @@ export default function HabitDetail() {
 
   function handleChange(event) {
     const { name, value } = event.target
+    setFieldErrors((current) => ({ ...current, [name]: '' }))
     setForm((current) => ({
       ...current,
       [name]:
         name === 'waterIntakeMl' || name === 'activityMinutes'
-          ? Number(value)
+          ? value === ''
+            ? ''
+            : Number(value)
           : value,
     }))
   }
@@ -66,26 +77,81 @@ export default function HabitDetail() {
   async function handleSubmit(event) {
     event.preventDefault()
 
+    const { data, errors } = await validateHabitForm(form)
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors)
+      setError('Corrija os campos destacados antes de salvar.')
+      toast.current?.show({
+        severity: 'error',
+        summary: 'Formulário invalido',
+        detail: Object.values(errors)[0],
+      })
+      return
+    }
+
     try {
       setSaving(true)
       setError('')
-      await updateHabitRecord(id, form)
+      setFieldErrors({})
+      await updateHabitRecord(id, data)
+      sessionStorage.setItem(
+        'habitToast',
+        JSON.stringify({
+          severity: 'success',
+          summary: 'Registro atualizado',
+          detail: 'As alterações foram salvas com sucesso.',
+        })
+      )
       navigate('/habits')
     } catch (requestError) {
-      setError(requestError.response?.data?.message || 'Unable to update record.')
+      const message =
+        requestError.response?.data?.message || 'Não foi possível atualizar o registro.'
+      setError(message)
+      toast.current?.show({
+        severity: 'error',
+        summary: 'Erro ao salvar',
+        detail: message,
+      })
     } finally {
       setSaving(false)
     }
   }
 
   async function handleDelete() {
+    const confirmed = window.confirm('Tem certeza de que deseja excluir este registro?')
+
+    if (!confirmed) {
+      toast.current?.show({
+        severity: 'info',
+        summary: 'Exclusão cancelada',
+        detail: 'O registro foi mantido.',
+      })
+      return
+    }
+
     try {
       setSaving(true)
       setError('')
       await deleteHabitRecord(id)
+      sessionStorage.setItem(
+        'habitToast',
+        JSON.stringify({
+          severity: 'success',
+          summary: 'Registro excluído',
+          detail: 'O registro foi removido com sucesso.',
+        })
+      )
       navigate('/habits')
     } catch (requestError) {
-      setError(requestError.response?.data?.message || 'Unable to delete record.')
+      const message =
+        requestError.response?.data?.message || 'Nao foi possível excluir o registro.'
+      setError(message)
+      toast.current?.show({
+        severity: 'error',
+        summary: 'Erro ao excluir',
+        detail: message,
+      })
       setSaving(false)
     }
   }
@@ -93,7 +159,7 @@ export default function HabitDetail() {
   if (loading) {
     return (
       <div className="empty-card">
-        <p>Loading record...</p>
+        <p>Carregando registro...</p>
       </div>
     )
   }
@@ -101,10 +167,10 @@ export default function HabitDetail() {
   if (!form) {
     return (
       <div className="empty-card">
-        <h2>Record unavailable</h2>
-        <p>{error || 'This record does not exist.'}</p>
+        <h2>Registro indisponível</h2>
+        <p>{error || 'Este registro nao existe.'}</p>
         <Link to="/habits" className="text-link">
-          Back to list
+          Voltar para a lista
         </Link>
       </div>
     )
@@ -112,50 +178,62 @@ export default function HabitDetail() {
 
   return (
     <div className="page-stack">
+      <Toast ref={toast} position="top-right" />
       <section className="page-section">
         <div className="section-header">
           <div>
-            <p className="section-kicker">Record detail</p>
-            <h1>Edit habit entry #{id}</h1>
+            <p className="section-kicker">Detalhe do registro</p>
+            <h1>Editar hábito #{id}</h1>
           </div>
           <Link to="/habits" className="text-link">
-            Back to list
+            Voltar para a lista
           </Link>
         </div>
 
         <form className="record-form" onSubmit={handleSubmit}>
           <label>
-            Date
+            Data
             <input
               type="date"
               name="date"
               value={form.date}
               onChange={handleChange}
+              min={minDateString}
+              max={maxDateString}
               required
             />
+            {fieldErrors.date && <small className="feedback-error">{fieldErrors.date}</small>}
           </label>
           <label>
-            Water (ml)
+            Água (ml)
             <input
               type="number"
               name="waterIntakeMl"
-              min="0"
+              min="1"
               value={form.waterIntakeMl}
               onChange={handleChange}
+              required
             />
+            {fieldErrors.waterIntakeMl && (
+              <small className="feedback-error">{fieldErrors.waterIntakeMl}</small>
+            )}
           </label>
           <label>
-            Activity (min)
+            Atividade (min)
             <input
               type="number"
               name="activityMinutes"
-              min="0"
+              min="1"
               value={form.activityMinutes}
               onChange={handleChange}
+              required
             />
+            {fieldErrors.activityMinutes && (
+              <small className="feedback-error">{fieldErrors.activityMinutes}</small>
+            )}
           </label>
           <label>
-            Mood
+            Humor
             <input
               type="text"
               name="mood"
@@ -163,10 +241,12 @@ export default function HabitDetail() {
               maxLength="30"
               value={form.mood}
               onChange={handleChange}
+              required
             />
+            {fieldErrors.mood && <small className="feedback-error">{fieldErrors.mood}</small>}
           </label>
           <label className="full-span">
-            Notes
+            Observações
             <textarea
               name="notes"
               rows="5"
@@ -174,11 +254,12 @@ export default function HabitDetail() {
               value={form.notes}
               onChange={handleChange}
             />
+            {fieldErrors.notes && <small className="feedback-error">{fieldErrors.notes}</small>}
           </label>
 
           <div className="button-row">
             <button type="submit" className="primary-button" disabled={saving}>
-              {saving ? 'Saving...' : 'Save changes'}
+              {saving ? 'Salvando...' : 'Salvar alteracoes'}
             </button>
             <button
               type="button"
@@ -186,7 +267,7 @@ export default function HabitDetail() {
               disabled={saving}
               onClick={handleDelete}
             >
-              Delete
+              Excluir
             </button>
           </div>
         </form>

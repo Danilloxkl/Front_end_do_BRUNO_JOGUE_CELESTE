@@ -36,7 +36,7 @@ export default function Login() {
         await login(form.email, form.password)
       }
     } catch (requestError) {
-      setError(requestError.response?.data?.message || 'Authentication failed.')
+      setError(requestError.response?.data?.message || 'Falha na autenticação.')
     } finally {
       setLoading(false)
     }
@@ -46,11 +46,10 @@ export default function Login() {
     <div className="auth-layout">
       <section className="auth-card">
         <div>
-          <p className="section-kicker">Authentication</p>
-          <h1>{mode === 'login' ? 'Sign in' : 'Create account'}</h1>
+          <p className="section-kicker">Autenticação</p>
+          <h1>{mode === 'login' ? 'Entrar' : 'Criar conta'}</h1>
           <p className="hero-copy">
-            This screen calls your Express backend directly instead of using demo
-            local data.
+            Entre com sua conta para acessar e registrar seus hábitos diários.
           </p>
         </div>
 
@@ -66,7 +65,7 @@ export default function Login() {
             />
           </label>
           <label className="full-span">
-            Password
+            Senha
             <input
               type="password"
               name="password"
@@ -79,10 +78,10 @@ export default function Login() {
 
           <button type="submit" className="primary-button" disabled={loading}>
             {loading
-              ? 'Please wait...'
+              ? 'Aguarde...'
               : mode === 'login'
-                ? 'Login'
-                : 'Register and login'}
+                ? 'Entrar'
+                : 'Cadastrar e entrar'}
           </button>
         </form>
 
@@ -92,8 +91,8 @@ export default function Login() {
           onClick={() => setMode((current) => (current === 'login' ? 'register' : 'login'))}
         >
           {mode === 'login'
-            ? 'Need an account? Register here.'
-            : 'Already registered? Go back to login.'}
+            ? 'Não tem conta? Cadastre-se aqui.'
+            : 'Já tem cadastro? Voltar para o login.'}
         </button>
 
         {error && <p className="feedback-error">{error}</p>}

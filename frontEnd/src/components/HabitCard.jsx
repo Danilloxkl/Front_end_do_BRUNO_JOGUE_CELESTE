@@ -10,19 +10,19 @@ export default function HabitCard({ record }) {
 
       <div className="habit-metrics">
         <div>
-          <span className="metric-label">Water</span>
+          <span className="metric-label">Água</span>
           <strong>{record.waterIntakeMl} ml</strong>
         </div>
         <div>
-          <span className="metric-label">Activity</span>
+          <span className="metric-label">Atividade</span>
           <strong>{record.activityMinutes} min</strong>
         </div>
       </div>
 
-      <p className="habit-notes">{record.notes || 'No notes for this day.'}</p>
+      <p className="habit-notes">{record.notes || 'Sem observações para este dia.'}</p>
 
       <Link to={`/habits/${record.id}`} className="text-link">
-        Open details
+        Abrir detalhes
       </Link>
     </article>
   )

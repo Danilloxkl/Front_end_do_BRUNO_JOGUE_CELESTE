@@ -60,9 +60,8 @@ export default function Home() {
           <p className="eyebrow">HabitRecorderr</p>
           <h1>Registre suas atividades :DDDD</h1>
           <p className="hero-copy">
-            This frontend is now aligned with your Express API, so the app can
-            authenticate users and read real habit records instead of leftover
-            product data.
+            Acompanhe agua, atividade, humor e observações em um painel simples conectado
+            ao nosso backend e DB.
           </p>
         </div>
 
@@ -77,11 +76,9 @@ export default function Home() {
               </span>
             </>
           ) : (
-            <>
-              <Link to="/login" className="primary-link">
-                Logue para continuar
-              </Link>
-            </>
+            <Link to="/login" className="primary-link">
+              Entrar para continuar
+            </Link>
           )}
         </div>
       </section>
@@ -95,21 +92,17 @@ export default function Home() {
           <article className="stat-card">
             <span className="stat-label">Méd. de água</span>
             <strong>
-              {loading
-                ? '...'
-                : `${summary?.user?.averageWaterIntakeMl ?? 0} ml`}
+              {loading ? '...' : `${summary?.user?.averageWaterIntakeMl ?? 0} ml`}
             </strong>
           </article>
           <article className="stat-card">
             <span className="stat-label">Atividade Méd.</span>
             <strong>
-              {loading
-                ? '...'
-                : `${summary?.user?.averageActivityMinutes ?? 0} min`}
+              {loading ? '...' : `${summary?.user?.averageActivityMinutes ?? 0} min`}
             </strong>
           </article>
           <article className="stat-card">
-            <span className="stat-label">Tracked users</span>
+            <span className="stat-label">Usuários monitorados</span>
             <strong>{loading ? '...' : summary?.general?.totalTrackedUsers ?? 0}</strong>
           </article>
         </section>
@@ -120,10 +113,10 @@ export default function Home() {
           <div className="section-header">
             <div>
               <p className="section-kicker">Atividade recente</p>
-              <h2>Últimas entradas</h2>
+              <h2>Últimos registros</h2>
             </div>
             <Link to="/habits" className="text-link">
-              Ver todas
+              Ver todos
             </Link>
           </div>
 
@@ -136,7 +129,7 @@ export default function Home() {
           ) : (
             <div className="empty-card">
               <h3>Nenhum registro</h3>
-              <p>Create your first daily check-in from the habits page.</p>
+              <p>Crie seu primeiro check-in diário na página de hábitos.</p>
             </div>
           )}
         </section>
