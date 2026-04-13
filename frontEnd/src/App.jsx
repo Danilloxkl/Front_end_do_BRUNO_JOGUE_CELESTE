@@ -6,6 +6,8 @@ import Home from './pages/Home'
 import HabitList from './pages/HabitList'
 import HabitDetail from './pages/HabitDetail'
 import Login from './pages/Login'
+import Admin from "./pages/Admin"
+import AdminRoute from "./components/AdminRoute"
 
 export default function App() {
   return (
@@ -31,6 +33,14 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/admin"
+            element={
+             <AdminRoute>
+              <Admin />
+            </AdminRoute>
+            }
+/>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
