@@ -89,23 +89,6 @@ Com o back atual, estas partes do front podem funcionar:
 - criação, edição e remoção de registros
 - resumo em `/habit-records/stats/summary`
 
-## Observação importante sobre a área de admin
-
-Existe uma tela `Admin`, mas hoje ela chama rotas como:
-
-- `GET /admin/habits`
-- `POST /admin/habits`
-- `PUT /admin/habits/:id`
-- `DELETE /admin/habits/:id`
-
-Essas rotas não existem no back enviado junto com este projeto. No back atual, as rotas administrativas são outras, como:
-
-- `GET /habit-records/admin/all`
-- `DELETE /habit-records/admin/:id`
-- `GET /users`
-
-Então, para a tela de admin funcionar, será preciso alinhar o arquivo `src/api/adminApi.js` com as rotas reais do back.
-
 O painel usa estas rotas reais do back:
 
 - `GET /habit-records/admin/all`
