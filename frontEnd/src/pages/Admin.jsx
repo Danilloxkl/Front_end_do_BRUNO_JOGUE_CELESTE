@@ -1,88 +1,234 @@
 import { useEffect, useState } from "react"
+import { useAuth } from "../context/AuthContext"
 import {
-  getAllHabitsAdmin,
-  createHabitAdmin,
-  updateHabitAdmin,
-  deleteHabitAdmin
+  deleteAdminRecord,
+  deleteUserAdmin,
+  getAdminRecords,
+  getUsersAdmin,
+  updateUserAdmin,
 } from "../api/adminApi"
 
-export default function Admin() {
-  const [habits, setHabits] = useState([])
-  const [title, setTitle] = useState("")
-  const [description, setDescription] = useState("")
-  const [editingId, setEditingId] = useState(null)
+function formatDate(value) {
+  if (!value) {
+    return "Sem data"
+  }
 
-  const loadHabits = async () => {
-    const data = await getAllHabitsAdmin()
-    setHabits(data)
+  return new Date(value).toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  })
+}
+
+export default function Admin() {
+  const { user } = useAuth()
+  const [users, setUsers] = useState([])
+  const [records, setRecords] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+
+  async function loadAdminData() {
+    try {
+      setLoading(true)
+      setError("")
+
+      const [usersData, recordsData] = await Promise.all([
+        getUsersAdmin(),
+        getAdminRecords(),
+      ])
+
+      setUsers(usersData)
+      setRecords(recordsData)
+    } catch (requestError) {
+      setError(
+        requestError.response?.data?.message ||
+          requestError.response?.data?.error ||
+          "Nao foi possivel carregar os dados de administracao."
+      )
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
-    loadHabits()
+    loadAdminData()
   }, [])
 
-  const handleSubmit = async () => {
-    if (editingId) {
-      await updateHabitAdmin(editingId, { title, description })
-      setEditingId(null)
-    } else {
-      await createHabitAdmin({ title, description })
+  async function handleRoleToggle(targetUser) {
+    const nextRole = targetUser.role === "admin" ? "user" : "admin"
+
+    try {
+      setError("")
+      await updateUserAdmin(targetUser.id, { role: nextRole })
+      await loadAdminData()
+    } catch (requestError) {
+      setError(
+        requestError.response?.data?.message ||
+          requestError.response?.data?.error ||
+          "Nao foi possivel atualizar a permissao do usuario."
+      )
+    }
+  }
+
+  async function handleDeleteUser(targetUser) {
+    if (targetUser.id === user?.id) {
+      return
     }
 
-    setTitle("")
-    setDescription("")
-    loadHabits()
+    try {
+      setError("")
+      await deleteUserAdmin(targetUser.id)
+      await loadAdminData()
+    } catch (requestError) {
+      setError(
+        requestError.response?.data?.message ||
+          requestError.response?.data?.error ||
+          "Nao foi possivel remover o usuario."
+      )
+    }
   }
 
-  const handleEdit = (habit) => {
-    setTitle(habit.title)
-    setDescription(habit.description)
-    setEditingId(habit._id)
-  }
-
-  const handleDelete = async (id) => {
-    await deleteHabitAdmin(id)
-    loadHabits()
+  async function handleDeleteRecord(recordId) {
+    try {
+      setError("")
+      await deleteAdminRecord(recordId)
+      await loadAdminData()
+    } catch (requestError) {
+      setError(
+        requestError.response?.data?.message ||
+          requestError.response?.data?.error ||
+          "Nao foi possivel remover o registro."
+      )
+    }
   }
 
   return (
-    <div className="container">
-      <h1>Painel Admin</h1>
-
-      <div>
-        <input
-          placeholder="Título"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-        />
-
-        <input
-          placeholder="Descrição"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-        />
-
-        <button onClick={handleSubmit}>
-          {editingId ? "Atualizar" : "Criar"}
-        </button>
-      </div>
-
-      <div>
-        {habits.map((habit) => (
-          <div key={habit._id}>
-            <h3>{habit.title}</h3>
-            <p>{habit.description}</p>
-
-            <button onClick={() => handleEdit(habit)}>
-              Editar
-            </button>
-
-            <button onClick={() => handleDelete(habit._id)}>
-              Deletar
-            </button>
+    <div className="page-stack">
+      <section className="hero-panel">
+        <span className="eyebrow">Area administrativa</span>
+        <div className="section-header">
+          <div>
+            <h1>Painel Admin</h1>
+            <p className="hero-copy">
+              Gerencie usuarios, permissoes e registros globais da plataforma.
+            </p>
           </div>
-        ))}
-      </div>
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={loadAdminData}
+            disabled={loading}
+          >
+            Atualizar dados
+          </button>
+        </div>
+        {error ? <p className="feedback-error">{error}</p> : null}
+      </section>
+
+      <section className="page-section">
+        <div className="section-header">
+          <div>
+            <span className="section-kicker">Usuarios</span>
+            <h2>Permissoes da conta</h2>
+          </div>
+          <span className="pill">{users.length} usuarios</span>
+        </div>
+
+        <div className="admin-grid">
+          {users.map((targetUser) => {
+            const isCurrentUser = targetUser.id === user?.id
+
+            return (
+              <article key={targetUser.id} className="habit-card">
+                <div className="habit-card-top">
+                  <div>
+                    <strong>{targetUser.email}</strong>
+                    <p className="habit-notes">
+                      Criado em {formatDate(targetUser.createdAt)}
+                    </p>
+                  </div>
+                  <span className="pill">{targetUser.role}</span>
+                </div>
+
+                <div className="button-row">
+                  <button
+                    type="button"
+                    className="primary-button"
+                    onClick={() => handleRoleToggle(targetUser)}
+                    disabled={loading || isCurrentUser}
+                  >
+                    {targetUser.role === "admin" ? "Remover admin" : "Tornar admin"}
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={() => handleDeleteUser(targetUser)}
+                    disabled={loading || isCurrentUser}
+                  >
+                    Remover usuario
+                  </button>
+                </div>
+
+                {isCurrentUser ? (
+                  <p className="muted-inline">
+                    Sua propria conta fica protegida nesta tela.
+                  </p>
+                ) : null}
+              </article>
+            )
+          })}
+        </div>
+      </section>
+
+      <section className="page-section">
+        <div className="section-header">
+          <div>
+            <span className="section-kicker">Registros</span>
+            <h2>Todos os habitos enviados</h2>
+          </div>
+          <span className="pill">{records.length} registros</span>
+        </div>
+
+        <div className="admin-grid">
+          {records.map((record) => (
+            <article key={record.id} className="habit-card">
+              <div className="habit-card-top">
+                <div>
+                  <strong>{record.user?.email || "Usuario sem email"}</strong>
+                  <p className="habit-notes">
+                    {formatDate(record.date)} - Humor: {record.mood || "nao informado"}
+                  </p>
+                </div>
+                <span className="pill">#{record.id}</span>
+              </div>
+
+              <div className="habit-metrics">
+                <div>
+                  <span className="metric-label">Agua</span>
+                  <strong>{record.waterIntakeMl ?? 0} ml</strong>
+                </div>
+                <div>
+                  <span className="metric-label">Atividade</span>
+                  <strong>{record.activityMinutes ?? 0} min</strong>
+                </div>
+              </div>
+
+              <p className="habit-notes">{record.notes || "Sem observacoes."}</p>
+
+              <div className="button-row">
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => handleDeleteRecord(record.id)}
+                  disabled={loading}
+                >
+                  Remover registro
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
     </div>
   )
 }

@@ -1,21 +1,26 @@
 import http from "./http"
 
-export const getAllHabitsAdmin = async () => {
-  const res = await http.get("/admin/habits")
+export async function getAdminRecords() {
+  const res = await http.get("/habit-records/admin/all")
   return res.data
 }
 
-export const createHabitAdmin = async (data) => {
-  const res = await http.post("/admin/habits", data)
+export async function deleteAdminRecord(id) {
+  const res = await http.delete(`/habit-records/admin/${id}`)
   return res.data
 }
 
-export const updateHabitAdmin = async (id, data) => {
-  const res = await http.put(`/admin/habits/${id}`, data)
+export async function getUsersAdmin() {
+  const res = await http.get("/users")
   return res.data
 }
 
-export const deleteHabitAdmin = async (id) => {
-  const res = await http.delete(`/admin/habits/${id}`)
+export async function updateUserAdmin(id, payload) {
+  const res = await http.patch(`/users/${id}`, payload)
+  return res.data
+}
+
+export async function deleteUserAdmin(id) {
+  const res = await http.delete(`/users/${id}`)
   return res.data
 }
